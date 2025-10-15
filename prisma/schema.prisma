@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int         @id @default(autoincrement())
+  telegramId String      @unique
+  firstName  String?
+  timezone   String      @default("Europe/Moscow")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  medications Medication[]
+}
+
+model Medication {
+  id          Int        @id @default(autoincrement())
+  userId      Int
+  user        User       @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  frequency   String     @default("DAILY") // DAILY, WEEKLY, CUSTOM, INTERVAL
+  weekDays    String?    // JSON: ["Monday", "Wednesday", "Friday"]
+  intervalDays Int?      // Для приёма через N дней
+  timesPerDay Int        @default(1)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  schedules   Schedule[]
+  intakeLogs  IntakeLog[]
+}
+
+model Schedule {
+  id           Int        @id @default(autoincrement())
+  medicationId Int
+  medication   Medication @relation(fields: [medicationId], references: [id])
+  time         String
+  dosage       String
+  notes        String?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model IntakeLog {
+  id            Int        @id @default(autoincrement())
+  userId        Int
+  medicationId  Int
+  medication    Medication @relation(fields: [medicationId], references: [id])
+  scheduleId    Int
+  scheduledDate DateTime
+  status        String     @default("PENDING") // PENDING, SENT, CONFIRMED, MISSED
+  sentAt        DateTime?
+  confirmedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  @@index([userId, scheduledDate])
+  @@index([status, sentAt])
+  @@unique([scheduleId, scheduledDate])
+}
